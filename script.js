@@ -7,36 +7,31 @@ const CORS_PROXIES = [
 ];
 
 // سیستم شمارش تعداد اجراها
-// استفاده از JSONBin.io برای ذخیره تعداد اجراها
-const JSONBIN_BIN_ID = '675f0f0de41b4a34b8b3a123'; // این ID بعد از ایجاد bin باید تغییر کند
-const JSONBIN_API_KEY = '$2a$10$YOUR_API_KEY'; // این هم باید تنظیم شود
-const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-
-// استفاده از CountAPI به عنوان fallback
-const COUNT_API_KEY = 'project-price-calculator-sunrise';
+// استفاده از CountAPI با CORS proxy
+const COUNT_API_KEY = 'project-price-calculator-sunrise-sunrise4solution';
 const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_API_KEY}`;
 const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
+
+// استفاده از CORS proxy برای CountAPI
+function getCountAPIWithProxy(url) {
+    // استفاده از allorigins که معمولاً بهتر کار می‌کند
+    return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+}
 
 // ثبت یک اجرای جدید
 async function trackExecution() {
     try {
-        // روش 1: استفاده از CountAPI (ساده‌تر)
-        fetch(COUNT_API_URL, {
-            method: 'GET',
-            mode: 'cors'
-        }).catch(() => {
-            // در صورت خطا، نادیده می‌گیریم
-        });
-        
-        // روش 2: استفاده از localStorage و افزایش شمارنده
+        // ثبت در localStorage برای نمایش فوری
         const savedCount = localStorage.getItem('executionCount');
         const newCount = savedCount ? parseInt(savedCount) + 1 : 1;
         localStorage.setItem('executionCount', newCount);
         localStorage.setItem('executionCountTime', Date.now());
         updateExecutionCountDisplay(newCount);
         
-        // دریافت تعداد کل از CountAPI (در پس‌زمینه)
-        fetch(COUNT_GET_URL, {
+        // ثبت در CountAPI با استفاده از proxy
+        const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
+        
+        fetch(proxyUrl, {
             method: 'GET',
             mode: 'cors'
         })
@@ -47,17 +42,31 @@ async function trackExecution() {
             return null;
         })
         .then(data => {
-            if (data && data.value) {
-                // اگر مقدار از سرور بیشتر بود، از سرور استفاده می‌کنیم
-                if (data.value >= newCount) {
-                    localStorage.setItem('executionCount', data.value);
-                    localStorage.setItem('executionCountTime', Date.now());
-                    updateExecutionCountDisplay(data.value);
+            // allorigins پاسخ را در contents برمی‌گرداند
+            if (data && data.contents) {
+                try {
+                    const apiResponse = JSON.parse(data.contents);
+                    if (apiResponse && apiResponse.value) {
+                        // به‌روزرسانی با مقدار از سرور
+                        localStorage.setItem('executionCount', apiResponse.value);
+                        localStorage.setItem('executionCountTime', Date.now());
+                        updateExecutionCountDisplay(apiResponse.value);
+                    }
+                } catch (e) {
+                    // اگر parse نشد، از localStorage استفاده می‌کنیم
                 }
             }
         })
         .catch(() => {
             // خطا را نادیده می‌گیریم - از localStorage استفاده می‌کنیم
+        });
+        
+        // همچنین تلاش مستقیم (بدون proxy) - در صورت امکان
+        fetch(COUNT_API_URL, {
+            method: 'GET',
+            mode: 'cors'
+        }).catch(() => {
+            // نادیده می‌گیریم
         });
     } catch (error) {
         // خطا را نادیده می‌گیریم تا تجربه کاربری مختل نشود
@@ -105,24 +114,66 @@ function loadExecutionCount() {
         updateExecutionCountDisplay(parseInt(savedCount));
     }
     
-    // دریافت تعداد واقعی از API
-    fetch(COUNT_GET_URL, {
+    // دریافت تعداد واقعی از API با proxy
+    const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+    
+    fetch(proxyUrl, {
         method: 'GET',
         mode: 'cors'
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data && data.value) {
-            localStorage.setItem('executionCount', data.value);
-            localStorage.setItem('executionCountTime', Date.now());
-            updateExecutionCountDisplay(data.value);
+    .then(response => {
+        if (response.ok) {
+            return response.json();
         }
+        throw new Error('Response not OK');
     })
-    .catch(() => {
-        // در صورت خطا، از localStorage استفاده می‌کنیم
+    .then(data => {
+        // allorigins پاسخ را در contents برمی‌گرداند
+        if (data && data.contents) {
+            try {
+                const apiResponse = JSON.parse(data.contents);
+                if (apiResponse && apiResponse.value) {
+                    localStorage.setItem('executionCount', apiResponse.value);
+                    localStorage.setItem('executionCountTime', Date.now());
+                    updateExecutionCountDisplay(apiResponse.value);
+                    return;
+                }
+            } catch (e) {
+                // parse نشد
+            }
+        }
+        // اگر parse نشد، از localStorage استفاده می‌کنیم
         if (savedCount) {
             updateExecutionCountDisplay(parseInt(savedCount));
         }
+    })
+    .catch(() => {
+        // تلاش مستقیم (بدون proxy)
+        fetch(COUNT_GET_URL, {
+            method: 'GET',
+            mode: 'cors'
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Response not OK');
+        })
+        .then(data => {
+            if (data && data.value) {
+                localStorage.setItem('executionCount', data.value);
+                localStorage.setItem('executionCountTime', Date.now());
+                updateExecutionCountDisplay(data.value);
+            } else if (savedCount) {
+                updateExecutionCountDisplay(parseInt(savedCount));
+            }
+        })
+        .catch(() => {
+            // در صورت خطا، از localStorage استفاده می‌کنیم
+            if (savedCount) {
+                updateExecutionCountDisplay(parseInt(savedCount));
+            }
+        });
     });
 }
 
