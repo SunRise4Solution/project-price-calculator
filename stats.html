@@ -130,30 +130,12 @@
     </div>
 
     <script>
-        const COUNT_NAMESPACE = 'sunrise4solution';
-        const COUNT_KEY = 'project-price-calculator';
-        const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_NAMESPACE}/${COUNT_KEY}`;
-        const COUNT_CREATE_URL = `https://api.countapi.xyz/create?namespace=${COUNT_NAMESPACE}&key=${COUNT_KEY}&value=0`;
+        const COUNT_KEY = 'sunrise4solution-project-price-calculator';
+        const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_KEY}`;
         
-        // ایجاد counter در صورت عدم وجود
-        function ensureCounterExists() {
-            const counterCreated = sessionStorage.getItem('counterCreated');
-            if (counterCreated) {
-                return;
-            }
-            
-            fetch(COUNT_CREATE_URL, {
-                method: 'GET',
-                mode: 'cors'
-            })
-            .then(response => {
-                if (response.ok) {
-                    sessionStorage.setItem('counterCreated', 'true');
-                }
-            })
-            .catch(() => {
-                // خطا را نادیده می‌گیریم
-            });
+        // استفاده از CORS proxy برای CountAPI
+        function getCountAPIWithProxy(url) {
+            return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         }
         const CORS_PROXIES = [
             'https://api.allorigins.win/raw?url=',
@@ -168,9 +150,6 @@
         
         // بارگذاری آمار
         function loadStats() {
-            // اطمینان از وجود counter
-            ensureCounterExists();
-            
             const loadingEl = document.getElementById('loading');
             const valueEl = document.getElementById('totalExecutions');
             const statusEl = document.getElementById('statusMessage');
@@ -180,29 +159,23 @@
             
             // ابتدا نمایش مقدار localStorage
             const savedCount = localStorage.getItem('executionCount');
-                if (savedCount) {
-                    valueEl.textContent = formatNumber(parseInt(savedCount));
-                    if (statusEl) {
-                        statusEl.textContent = '📊 نمایش مقدار محلی';
-                        statusEl.style.color = '#88c0d0';
-                    }
-                } else {
-                    valueEl.textContent = '0';
+            if (savedCount) {
+                valueEl.textContent = formatNumber(parseInt(savedCount));
+                if (statusEl) {
+                    statusEl.textContent = '📊 نمایش مقدار محلی';
+                    statusEl.style.color = '#88c0d0';
                 }
-                
-                // استفاده از CORS proxy برای CountAPI
-                function getCountAPIWithProxy(url) {
-                    return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                }
-                
-                // دریافت آمار کلی از سرور - ابتدا تلاش مستقیم
-                fetch(COUNT_GET_URL, {
-                    method: 'GET',
-                    mode: 'cors',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+            } else {
+                valueEl.textContent = '0';
+            }
+            
+            // دریافت آمار کلی از سرور - استفاده از proxy (مطمئن‌تر)
+            const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+            
+            fetch(proxyUrl, {
+                method: 'GET',
+                mode: 'cors'
+            })
                 .then(response => {
                     if (response.ok) {
                         return response.json();
