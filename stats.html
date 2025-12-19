@@ -151,56 +151,50 @@
                 return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
             }
             
-            // تلاش برای دریافت از CountAPI با proxy
-            const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
-            
-            fetch(proxyUrl, {
+            // دریافت آمار کلی از سرور - ابتدا تلاش مستقیم
+            fetch(COUNT_GET_URL, {
                 method: 'GET',
-                mode: 'cors'
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
             })
             .then(response => {
                 if (response.ok) {
                     return response.json();
                 }
-                throw new Error('Response not OK');
+                throw new Error('Direct fetch failed');
             })
             .then(data => {
                 loadingEl.style.display = 'none';
-                // allorigins پاسخ را در contents برمی‌گرداند
-                if (data && data.contents) {
-                    try {
-                        const apiResponse = JSON.parse(data.contents);
-                        if (apiResponse && apiResponse.value !== undefined) {
-                            valueEl.textContent = formatNumber(apiResponse.value);
-                            localStorage.setItem('executionCount', apiResponse.value);
-                            localStorage.setItem('executionCountTime', Date.now());
-                            if (statusEl) {
-                                statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
-                                statusEl.style.color = '#28a745';
-                            }
-                            return;
-                        }
-                    } catch (e) {
-                        // parse نشد
-                    }
-                }
-                // اگر parse نشد یا داده معتبر نبود، از localStorage استفاده می‌کنیم
-                if (savedCount) {
+                if (data && data.value !== undefined) {
+                    valueEl.textContent = formatNumber(data.value);
+                    localStorage.setItem('executionCount', data.value);
+                    localStorage.setItem('executionCountTime', Date.now());
                     if (statusEl) {
-                        statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                        statusEl.style.color = '#ffc107';
+                        statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
+                        statusEl.style.color = '#28a745';
                     }
                 } else {
-                    valueEl.textContent = '0';
-                    if (statusEl) {
-                        statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                        statusEl.style.color = '#ffc107';
+                    if (savedCount) {
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                            statusEl.style.color = '#ffc107';
+                        }
+                    } else {
+                        valueEl.textContent = '0';
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                            statusEl.style.color = '#ffc107';
+                        }
                     }
                 }
             })
-            .catch(error => {
-                // تلاش مستقیم (بدون proxy)
-                fetch(COUNT_GET_URL, {
+            .catch(() => {
+                // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
+                const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+                
+                fetch(proxyUrl, {
                     method: 'GET',
                     mode: 'cors'
                 })
@@ -208,30 +202,39 @@
                     if (response.ok) {
                         return response.json();
                     }
-                    throw new Error('Response not OK');
+                    throw new Error('Proxy fetch failed');
                 })
                 .then(data => {
                     loadingEl.style.display = 'none';
-                    if (data && data.value !== undefined) {
-                        valueEl.textContent = formatNumber(data.value);
-                        localStorage.setItem('executionCount', data.value);
-                        localStorage.setItem('executionCountTime', Date.now());
+                    // allorigins پاسخ را در contents برمی‌گرداند
+                    if (data && data.contents) {
+                        try {
+                            const apiResponse = JSON.parse(data.contents);
+                            if (apiResponse && apiResponse.value !== undefined) {
+                                valueEl.textContent = formatNumber(apiResponse.value);
+                                localStorage.setItem('executionCount', apiResponse.value);
+                                localStorage.setItem('executionCountTime', Date.now());
+                                if (statusEl) {
+                                    statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
+                                    statusEl.style.color = '#28a745';
+                                }
+                                return;
+                            }
+                        } catch (e) {
+                            // parse نشد
+                        }
+                    }
+                    // اگر parse نشد یا داده معتبر نبود
+                    if (savedCount) {
                         if (statusEl) {
-                            statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
-                            statusEl.style.color = '#28a745';
+                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                            statusEl.style.color = '#ffc107';
                         }
                     } else {
-                        if (savedCount) {
-                            if (statusEl) {
-                                statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                                statusEl.style.color = '#ffc107';
-                            }
-                        } else {
-                            valueEl.textContent = '0';
-                            if (statusEl) {
-                                statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                                statusEl.style.color = '#ffc107';
-                            }
+                        valueEl.textContent = '0';
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                            statusEl.style.color = '#ffc107';
                         }
                     }
                 })
