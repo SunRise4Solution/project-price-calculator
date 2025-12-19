@@ -1,4 +1,4 @@
-// ایجنت جستجوی پروژه‌های مشابه از اینترنت
+ // ایجنت جستجوی پروژه‌های مشابه از اینترنت
 // استفاده از CORS proxy برای دسترسی به APIهای خارجی
 const CORS_PROXIES = [
     'https://api.allorigins.win/raw?url=',
@@ -7,8 +7,8 @@ const CORS_PROXIES = [
 ];
 
 // سیستم شمارش تعداد اجراها
-// استفاده از CountAPI با CORS proxy
-const COUNT_API_KEY = 'project-price-calculator-sunrise-sunrise4solution';
+// استفاده از CountAPI - یک کلید منحصر به فرد برای این پروژه
+const COUNT_API_KEY = 'sunrise4solution-project-price-calculator';
 const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_API_KEY}`;
 const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
 
@@ -28,45 +28,59 @@ async function trackExecution() {
         localStorage.setItem('executionCountTime', Date.now());
         updateExecutionCountDisplay(newCount);
         
-        // ثبت در CountAPI با استفاده از proxy
-        const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
-        
-        fetch(proxyUrl, {
+        // ثبت در CountAPI - ابتدا تلاش مستقیم
+        fetch(COUNT_API_URL, {
             method: 'GET',
-            mode: 'cors'
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
         })
         .then(response => {
             if (response.ok) {
                 return response.json();
             }
-            return null;
+            throw new Error('Direct fetch failed');
         })
         .then(data => {
-            // allorigins پاسخ را در contents برمی‌گرداند
-            if (data && data.contents) {
-                try {
-                    const apiResponse = JSON.parse(data.contents);
-                    if (apiResponse && apiResponse.value) {
-                        // به‌روزرسانی با مقدار از سرور
-                        localStorage.setItem('executionCount', apiResponse.value);
-                        localStorage.setItem('executionCountTime', Date.now());
-                        updateExecutionCountDisplay(apiResponse.value);
-                    }
-                } catch (e) {
-                    // اگر parse نشد، از localStorage استفاده می‌کنیم
-                }
+            if (data && data.value) {
+                localStorage.setItem('executionCount', data.value);
+                localStorage.setItem('executionCountTime', Date.now());
+                updateExecutionCountDisplay(data.value);
             }
         })
         .catch(() => {
-            // خطا را نادیده می‌گیریم - از localStorage استفاده می‌کنیم
-        });
-        
-        // همچنین تلاش مستقیم (بدون proxy) - در صورت امکان
-        fetch(COUNT_API_URL, {
-            method: 'GET',
-            mode: 'cors'
-        }).catch(() => {
-            // نادیده می‌گیریم
+            // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
+            const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
+            
+            fetch(proxyUrl, {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                return null;
+            })
+            .then(data => {
+                // allorigins پاسخ را در contents برمی‌گرداند
+                if (data && data.contents) {
+                    try {
+                        const apiResponse = JSON.parse(data.contents);
+                        if (apiResponse && apiResponse.value) {
+                            localStorage.setItem('executionCount', apiResponse.value);
+                            localStorage.setItem('executionCountTime', Date.now());
+                            updateExecutionCountDisplay(apiResponse.value);
+                        }
+                    } catch (e) {
+                        // parse نشد - از localStorage استفاده می‌کنیم
+                    }
+                }
+            })
+            .catch(() => {
+                // همه روش‌ها شکست خوردند - از localStorage استفاده می‌کنیم
+            });
         });
     } catch (error) {
         // خطا را نادیده می‌گیریم تا تجربه کاربری مختل نشود
