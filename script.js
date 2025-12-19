@@ -8,9 +8,35 @@ const CORS_PROXIES = [
 
 // سیستم شمارش تعداد اجراها
 // استفاده از CountAPI برای آمار کلی همه کاربران
-const COUNT_API_KEY = 'sunrise4solution-project-price-calculator';
-const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_API_KEY}`;
-const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
+// Namespace و Key برای این پروژه
+const COUNT_NAMESPACE = 'sunrise4solution';
+const COUNT_KEY = 'project-price-calculator';
+const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_NAMESPACE}/${COUNT_KEY}`;
+const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_NAMESPACE}/${COUNT_KEY}`;
+const COUNT_CREATE_URL = `https://api.countapi.xyz/create?namespace=${COUNT_NAMESPACE}&key=${COUNT_KEY}&value=0`;
+
+// ایجاد counter در صورت عدم وجود (فقط یک بار)
+function ensureCounterExists() {
+    // بررسی اینکه آیا قبلاً ایجاد شده یا نه
+    const counterCreated = sessionStorage.getItem('counterCreated');
+    if (counterCreated) {
+        return; // قبلاً ایجاد شده
+    }
+    
+    // تلاش برای ایجاد counter
+    fetch(COUNT_CREATE_URL, {
+        method: 'GET',
+        mode: 'cors'
+    })
+    .then(response => {
+        if (response.ok) {
+            sessionStorage.setItem('counterCreated', 'true');
+        }
+    })
+    .catch(() => {
+        // خطا را نادیده می‌گیریم - ممکن است قبلاً ایجاد شده باشد
+    });
+}
 
 // استفاده از CORS proxy برای CountAPI
 function getCountAPIWithProxy(url) {
@@ -28,6 +54,9 @@ async function trackExecution() {
         return;
     }
     hasTrackedThisSession = true;
+    
+    // اطمینان از وجود counter
+    ensureCounterExists();
     
     try {
         // ثبت در CountAPI - ابتدا تلاش مستقیم
@@ -116,11 +145,14 @@ function updateExecutionCountDisplay(count) {
         document.body.appendChild(countDisplay);
     }
     
-    // countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
+    countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
 }
 
 // بارگذاری تعداد اجراها در ابتدای صفحه (آمار کلی از سرور)
 function loadExecutionCount() {
+    // اطمینان از وجود counter
+    ensureCounterExists();
+    
     // نمایش مقدار localStorage به عنوان placeholder (در صورت وجود)
     const savedCount = localStorage.getItem('executionCount');
     if (savedCount) {
