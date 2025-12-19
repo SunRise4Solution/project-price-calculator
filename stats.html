@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آمار استفاده - محاسبه‌گر قیمت پروژه</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .stats-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-label {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        
+        .loading {
+            color: #666;
+            margin: 20px 0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="stats-container">
+        <h1>📊 آمار استفاده از محاسبه‌گر</h1>
+        
+        <div class="stat-box">
+            <div class="stat-label">تعداد کل اجراها</div>
+            <div class="stat-value" id="totalExecutions">-</div>
+            <div style="font-size: 0.9em; opacity: 0.8; margin-top: 10px;">
+                تعداد دفعاتی که کاربران از این ابزار استفاده کرده‌اند
+            </div>
+            <div id="statusMessage" style="font-size: 0.85em; margin-top: 15px; opacity: 0.7;"></div>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadStats()">🔄 به‌روزرسانی</button>
+        
+        <div class="loading" id="loading" style="display: none;">در حال بارگذاری...</div>
+        
+        <a href="index.html" class="back-link">← بازگشت به صفحه اصلی</a>
+    </div>
+
+    <script>
+        const COUNT_API_KEY = 'project-price-calculator-sunrise';
+        const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
+        const CORS_PROXIES = [
+            'https://api.allorigins.win/raw?url=',
+            'https://corsproxy.io/?',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
+        
+        // فرمت کردن اعداد فارسی
+        function formatNumber(num) {
+            return new Intl.NumberFormat('fa-IR').format(num);
+        }
+        
+        // بارگذاری آمار
+        function loadStats() {
+            const loadingEl = document.getElementById('loading');
+            const valueEl = document.getElementById('totalExecutions');
+            const statusEl = document.getElementById('statusMessage');
+            
+            loadingEl.style.display = 'block';
+            valueEl.textContent = '-';
+            
+            // ابتدا نمایش مقدار localStorage
+            const savedCount = localStorage.getItem('executionCount');
+            if (savedCount) {
+                valueEl.textContent = formatNumber(parseInt(savedCount));
+                if (statusEl) {
+                    statusEl.textContent = '📊 نمایش مقدار محلی';
+                    statusEl.style.color = '#17a2b8';
+                }
+            } else {
+                valueEl.textContent = '0';
+            }
+            
+            // تلاش برای دریافت از CountAPI
+            fetch(COUNT_GET_URL, {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Response not OK');
+            })
+            .then(data => {
+                loadingEl.style.display = 'none';
+                if (data && data.value !== undefined) {
+                    valueEl.textContent = formatNumber(data.value);
+                    localStorage.setItem('executionCount', data.value);
+                    localStorage.setItem('executionCountTime', Date.now());
+                    if (statusEl) {
+                        statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
+                        statusEl.style.color = '#28a745';
+                    }
+                } else {
+                    // اگر داده معتبر نبود، از localStorage استفاده می‌کنیم
+                    if (savedCount) {
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                            statusEl.style.color = '#ffc107';
+                        }
+                    } else {
+                        valueEl.textContent = '0';
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                            statusEl.style.color = '#ffc107';
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                loadingEl.style.display = 'none';
+                // استفاده از localStorage
+                if (savedCount) {
+                    if (statusEl) {
+                        statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                        statusEl.style.color = '#ffc107';
+                    }
+                } else {
+                    valueEl.textContent = '0';
+                    if (statusEl) {
+                        statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                        statusEl.style.color = '#ffc107';
+                    }
+                }
+            });
+        }
+        
+        // بارگذاری خودکار هنگام لود صفحه
+        window.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+        });
+    </script>
+</body>
+</html>
+
