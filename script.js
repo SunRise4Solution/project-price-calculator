@@ -1,41 +1,31 @@
- // ایجنت جستجوی پروژه‌های مشابه از اینترنت
-// استفاده از CORS proxy برای دسترسی به APIهای خارجی
 const CORS_PROXIES = [
     'https://api.allorigins.win/raw?url=',
     'https://corsproxy.io/?',
     'https://api.codetabs.com/v1/proxy?quest='
 ];
 
-// سیستم شمارش تعداد اجراها
-// استفاده از CountAPI برای آمار کلی همه کاربران
-// استفاده از یک key ساده (بدون namespace)
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2wA_oOZYxnWtB3oh-mHpKaIphx-WgPiSaLuPE8vsa6xcUdikiXt63k9BENV14o6hn/exec';
+
 const COUNT_KEY = 'sunrise4solution-project-price-calculator';
 const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_KEY}`;
 const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_KEY}`;
 
-// استفاده از CORS proxy برای CountAPI
 function getCountAPIWithProxy(url) {
     return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 }
 
-// استفاده از JSONBin.io به عنوان جایگزین (نیاز به ایجاد bin دارد)
-// برای استفاده: به jsonbin.io بروید و یک bin ایجاد کنید، سپس ID را اینجا بگذارید
-const JSONBIN_BIN_ID = null; // اگر می‌خواهید از JSONBin استفاده کنید، ID را اینجا بگذارید
-const JSONBIN_API_KEY = null; // API key از jsonbin.io
+const JSONBIN_BIN_ID = null;
+const JSONBIN_API_KEY = null;
 
-// بررسی اینکه آیا قبلاً در این session ثبت شده یا نه (برای جلوگیری از ثبت تکراری)
 let hasTrackedThisSession = false;
 
-// ثبت یک اجرای جدید (فقط یک بار در هر session)
 async function trackExecution() {
-    // جلوگیری از ثبت تکراری در یک session
     if (hasTrackedThisSession) {
         return;
     }
     hasTrackedThisSession = true;
     
     try {
-        // ثبت در CountAPI - استفاده از proxy (مطمئن‌تر)
         const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
         
         fetch(proxyUrl, {
@@ -49,7 +39,6 @@ async function trackExecution() {
             return null;
         })
         .then(data => {
-            // allorigins پاسخ را در contents برمی‌گرداند
             if (data && data.contents) {
                 try {
                     const apiResponse = JSON.parse(data.contents);
@@ -59,12 +48,10 @@ async function trackExecution() {
                         updateExecutionCountDisplay(apiResponse.value);
                     }
                 } catch (e) {
-                    // parse نشد
                 }
             }
         })
         .catch(() => {
-            // اگر proxy کار نکرد، تلاش مستقیم
             fetch(COUNT_API_URL, {
                 method: 'GET',
                 mode: 'cors',
@@ -86,22 +73,17 @@ async function trackExecution() {
                 }
             })
             .catch(() => {
-                // همه روش‌ها شکست خوردند
             });
         });
     } catch (error) {
-        // خطا را نادیده می‌گیریم تا تجربه کاربری مختل نشود
         console.log('خطا در ثبت اجرا:', error);
     }
 }
 
-// نمایش تعداد اجراها در صفحه
 function updateExecutionCountDisplay(count) {
-    // بررسی اینکه آیا قبلاً نمایش داده شده یا نه
     let countDisplay = document.getElementById('executionCountDisplay');
     
     if (!countDisplay) {
-        // ایجاد عنصر نمایش
         countDisplay = document.createElement('div');
         countDisplay.id = 'executionCountDisplay';
         countDisplay.style.cssText = `
@@ -124,13 +106,11 @@ function updateExecutionCountDisplay(count) {
 }
 
 function loadExecutionCount() {
-    // نمایش مقدار localStorage به عنوان placeholder (در صورت وجود)
     const savedCount = localStorage.getItem('executionCount');
     if (savedCount) {
         updateExecutionCountDisplay(parseInt(savedCount));
     }
     
-    // دریافت تعداد واقعی از API - استفاده از proxy (مطمئن‌تر)
     const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
     
     fetch(proxyUrl, {
@@ -144,7 +124,6 @@ function loadExecutionCount() {
         throw new Error('Proxy fetch failed');
     })
     .then(data => {
-        // allorigins پاسخ را در contents برمی‌گرداند
         if (data && data.contents) {
             try {
                 const apiResponse = JSON.parse(data.contents);
@@ -155,10 +134,8 @@ function loadExecutionCount() {
                     return;
                 }
             } catch (e) {
-                // parse نشد
             }
         }
-        // اگر parse نشد، تلاش مستقیم
         return fetch(COUNT_GET_URL, {
             method: 'GET',
             mode: 'cors',
@@ -183,14 +160,12 @@ function loadExecutionCount() {
         }
     })
     .catch(() => {
-        // در صورت خطا، از localStorage استفاده می‌کنیم
         if (savedCount) {
             updateExecutionCountDisplay(parseInt(savedCount));
         }
     });
 }
 
-// تبدیل نام نوع پروژه به انگلیسی برای جستجو
 function getProjectTypeEnglish(type) {
     const types = {
         'web': 'website',
@@ -204,7 +179,6 @@ function getProjectTypeEnglish(type) {
     return types[type] || 'software project';
 }
 
-// ضریب‌های قیمت بر اساس نوع پروژه
 const projectTypeMultipliers = {
     'web': 1.0,
     'mobile': 1.5,
@@ -215,7 +189,6 @@ const projectTypeMultipliers = {
     'other': 1.0
 };
 
-// ضریب‌های پیچیدگی
 const complexityMultipliers = {
     'simple': 0.7,
     'medium': 1.0,
@@ -223,7 +196,6 @@ const complexityMultipliers = {
     'very-complex': 2.5
 };
 
-// قیمت پایه برای هر فیچر (تومان)
 const baseFeaturePrices = {
     'احراز هویت': 2000000,
     'پنل مدیریت': 3000000,
@@ -239,7 +211,6 @@ const baseFeaturePrices = {
     'داشبورد': 2500000
 };
 
-// قیمت پایه برای هر تکنولوژی (تومان)
 const technologyBasePrices = {
     'React': 3000000,
     'Vue.js': 2500000,
@@ -257,32 +228,27 @@ const technologyBasePrices = {
     'Kotlin': 5000000
 };
 
-// فرمت کردن اعداد فارسی
 function formatNumber(num) {
     return new Intl.NumberFormat('fa-IR').format(Math.round(num));
 }
 
-// محاسبه قیمت بر اساس فیچرها
 function calculateFeaturePrice(features) {
     let total = 0;
     const featureList = features.split('\n').filter(f => f.trim());
     
     featureList.forEach(feature => {
         const trimmedFeature = feature.trim();
-        // جستجوی دقیق
         if (baseFeaturePrices[trimmedFeature]) {
             total += baseFeaturePrices[trimmedFeature];
         } else {
-            // جستجوی جزئی
             for (const [key, value] of Object.entries(baseFeaturePrices)) {
                 if (trimmedFeature.includes(key) || key.includes(trimmedFeature)) {
                     total += value;
                     break;
                 }
             }
-            // اگر پیدا نشد، قیمت پیش‌فرض
             if (!Object.keys(baseFeaturePrices).some(k => trimmedFeature.includes(k) || k.includes(trimmedFeature))) {
-                total += 1500000; // قیمت پیش‌فرض برای فیچرهای ناشناخته
+                total += 1500000;
             }
         }
     });
@@ -290,27 +256,23 @@ function calculateFeaturePrice(features) {
     return total;
 }
 
-// محاسبه قیمت بر اساس تکنولوژی‌ها
 function calculateTechnologyPrice(technologies) {
     let total = 0;
     const techList = technologies.split(',').map(t => t.trim());
     
     techList.forEach(tech => {
-        // جستجوی دقیق
         if (technologyBasePrices[tech]) {
             total += technologyBasePrices[tech];
         } else {
-            // جستجوی جزئی
             for (const [key, value] of Object.entries(technologyBasePrices)) {
                 if (tech.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(tech.toLowerCase())) {
                     total += value;
                     break;
                 }
             }
-            // اگر پیدا نشد، قیمت پیش‌فرض
             if (!Object.keys(technologyBasePrices).some(k => 
                 tech.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(tech.toLowerCase()))) {
-                total += 2000000; // قیمت پیش‌فرض برای تکنولوژی‌های ناشناخته
+                total += 2000000;
             }
         }
     });
@@ -318,9 +280,7 @@ function calculateTechnologyPrice(technologies) {
     return total;
 }
 
-// استخراج قیمت از متن
 function extractPriceFromText(text) {
-    // جستجوی قیمت به تومان
     const tomanPatterns = [
         /(\d+(?:[,\s]\d+)*)\s*تومان/gi,
         /(\d+(?:[,\s]\d+)*)\s*ت\.?و\.?م\.?ا\.?ن/gi,
@@ -328,7 +288,6 @@ function extractPriceFromText(text) {
         /هزینه[:\s]+(\d+(?:[,\s]\d+)*)/gi
     ];
     
-    // جستجوی قیمت به دلار
     const dollarPatterns = [
         /\$(\d+(?:[,\s]\d+)*)/gi,
         /(\d+(?:[,\s]\d+)*)\s*دلار/gi,
@@ -337,24 +296,22 @@ function extractPriceFromText(text) {
     
     let prices = [];
     
-    // استخراج قیمت‌های تومان
     tomanPatterns.forEach(pattern => {
         const matches = text.matchAll(pattern);
         for (const match of matches) {
             const price = parseInt(match[1].replace(/[,\s]/g, ''));
-            if (price > 100000 && price < 1000000000) { // محدوده منطقی
+            if (price > 100000 && price < 1000000000) {
                 prices.push(price);
             }
         }
     });
     
-    // استخراج قیمت‌های دلار و تبدیل به تومان (1 دلار = 50000 تومان)
     dollarPatterns.forEach(pattern => {
         const matches = text.matchAll(pattern);
         for (const match of matches) {
             const price = parseInt(match[1].replace(/[,\s]/g, ''));
-            if (price > 100 && price < 100000) { // محدوده منطقی
-                prices.push(price * 50000); // تبدیل به تومان
+            if (price > 100 && price < 100000) {
+                prices.push(price * 50000);
             }
         }
     });
@@ -362,13 +319,11 @@ function extractPriceFromText(text) {
     return prices;
 }
 
-// جستجوی پروژه‌های مشابه از اینترنت
 async function searchSimilarProjectsOnline(projectData) {
     const projectType = getProjectTypeEnglish(projectData.type);
     const techs = projectData.technologies.split(',').map(t => t.trim()).join(' ');
     const features = projectData.features.split('\n').slice(0, 3).map(f => f.trim()).join(' ');
     
-    // ساخت کوئری جستجو - شامل جستجو در سایت‌های فریلنسری
     const searchQueries = [
         `ponisha ${projectType} ${techs}`,
         `jobinja ${projectType} ${techs}`,
@@ -379,22 +334,18 @@ async function searchSimilarProjectsOnline(projectData) {
     const foundProjects = [];
     const seenPrices = new Set();
     
-    // جستجو در چند منبع - با مدیریت خطای بهتر
     for (const query of searchQueries) {
         let success = false;
         
-        // تلاش با چند proxy مختلف
         for (const proxy of CORS_PROXIES) {
             if (success) break;
             
             try {
-                // استفاده از DuckDuckGo HTML (بدون نیاز به API key)
                 const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
                 const proxyUrl = proxy + encodeURIComponent(searchUrl);
                 
-                // استفاده از AbortController برای timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); // کاهش timeout
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
                 
                 const response = await fetch(proxyUrl, {
                     method: 'GET',
@@ -411,11 +362,10 @@ async function searchSimilarProjectsOnline(projectData) {
             
                 if (response && response.ok) {
                     const html = await response.text();
-                    if (html && html.length > 100) { // بررسی اینکه HTML معتبر است
+                    if (html && html.length > 100) {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
                         
-                        // استخراج لینک‌ها و توضیحات
                         const results = doc.querySelectorAll('.result, .web-result, .links_main, .result__body');
                         
                         if (results.length > 0) {
@@ -431,14 +381,12 @@ async function searchSimilarProjectsOnline(projectData) {
                                 
                                 const fullText = (title + ' ' + snippet).toLowerCase();
                                 
-                                // بررسی تطابق با تکنولوژی‌ها
                                 const techsLower = techs.toLowerCase();
                                 const hasMatchingTech = techsLower.split(' ').some(tech => 
                                     tech.length > 2 && fullText.includes(tech.toLowerCase())
                                 );
                                 
                                 if (hasMatchingTech || title.length > 10) {
-                                    // بررسی اینکه آیا لینک به سایت فریلنسری است
                                     let finalLink = link;
                                     let isFreelanceSite = false;
                                     
@@ -449,17 +397,15 @@ async function searchSimilarProjectsOnline(projectData) {
                                         finalLink = `https://jobinja.ir/jobs?q=${encodeURIComponent(techs)}`;
                                         isFreelanceSite = true;
                                     } else if (!link || link === '#' || link.startsWith('#')) {
-                                        // اگر لینک معتبر نیست، لینک جستجو بساز
                                         finalLink = `https://ponisha.ir/search/projects?q=${encodeURIComponent(techs)}`;
                                         isFreelanceSite = true;
                                     }
                                     
-                                    // استخراج قیمت
                                     const prices = extractPriceFromText(title + ' ' + snippet);
                                     
                                     if (prices.length > 0) {
                                         const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-                                        const priceKey = Math.round(avgPrice / 1000000); // گروه‌بندی بر اساس میلیون
+                                        const priceKey = Math.round(avgPrice / 1000000);
                                         
                                         if (!seenPrices.has(priceKey) && avgPrice > 1000000) {
                                             seenPrices.add(priceKey);
@@ -474,7 +420,6 @@ async function searchSimilarProjectsOnline(projectData) {
                                             });
                                         }
                                     } else {
-                                        // اگر قیمت پیدا نشد، از محاسبه استفاده می‌کنیم
                                         const estimatedPrice = estimatePriceFromDescription(title + ' ' + snippet, projectData);
                                         if (estimatedPrice > 0) {
                                             foundProjects.push({
@@ -492,31 +437,26 @@ async function searchSimilarProjectsOnline(projectData) {
                             }
                             
                             if (foundProjects.length > 0) {
-                                success = true; // موفقیت‌آمیز بود
+                                success = true;
                             }
                         }
                     }
                 }
             } catch (error) {
-                // خطا را نادیده می‌گیریم و به proxy بعدی می‌رویم
                 continue;
             }
         }
         
-        // اگر یک کوئری موفق بود، نیازی به ادامه نیست
         if (foundProjects.length >= 2) break;
     }
     
-    // همیشه حداقل پروژه‌های fallback را برمی‌گردانیم
     return foundProjects;
 }
 
-// تخمین قیمت از توضیحات
 function estimatePriceFromDescription(text, projectData) {
     const textLower = text.toLowerCase();
     let basePrice = 5000000;
     
-    // بررسی کلمات کلیدی قیمت
     if (textLower.includes('simple') || textLower.includes('basic') || textLower.includes('ساده')) {
         basePrice = 8000000;
     } else if (textLower.includes('complex') || textLower.includes('advanced') || textLower.includes('پیچیده')) {
@@ -525,20 +465,17 @@ function estimatePriceFromDescription(text, projectData) {
         basePrice = 50000000;
     }
     
-    // تطبیق با نوع پروژه
     const typeMultiplier = projectTypeMultipliers[projectData.type] || 1.0;
     basePrice *= typeMultiplier;
     
     return basePrice;
 }
 
-// تولید پروژه‌های جایگزین بر اساس محاسبه با لینک‌های واقعی
 function generateFallbackProjects(projectData) {
     const basePrice = calculateBasePrice(projectData);
     const projectType = getProjectTypeName(projectData.type);
     const techs = projectData.technologies.split(',').map(t => t.trim());
     
-    // لینک‌های واقعی به سایت‌های فریلنسری و نمونه کارها
     const freelanceLinks = [
         {
             name: 'Ponisha (پونیشا)',
@@ -557,7 +494,6 @@ function generateFallbackProjects(projectData) {
         }
     ];
     
-    // ساخت لینک‌های جستجو
     const links = freelanceLinks.map(fl => {
         if (fl.search) {
             return `${fl.url}?q=${fl.search}`;
@@ -565,7 +501,6 @@ function generateFallbackProjects(projectData) {
         return fl.url;
     });
     
-    // ساخت لینک جستجو با تکنولوژی‌ها
     const techQuery = encodeURIComponent(techs.join(' '));
     
     return [
@@ -599,7 +534,6 @@ function generateFallbackProjects(projectData) {
     ];
 }
 
-// محاسبه قیمت پایه
 function calculateBasePrice(projectData) {
     let basePrice = 5000000;
     basePrice += calculateFeaturePrice(projectData.features);
@@ -611,34 +545,27 @@ function calculateBasePrice(projectData) {
     return basePrice;
 }
 
-// پیدا کردن پروژه‌های مشابه (تابع اصلی)
 async function findSimilarProjects(projectData) {
     try {
-        // جستجوی آنلاین با timeout
         const searchPromise = searchSimilarProjectsOnline(projectData);
         const timeoutPromise = new Promise((resolve) => {
-            setTimeout(() => resolve([]), 5000); // حداکثر 5 ثانیه
+            setTimeout(() => resolve([]), 5000);
         });
         
         const onlineProjects = await Promise.race([searchPromise, timeoutPromise]);
         
-        // اگر نتایج کافی پیدا نشد، از محاسبه استفاده می‌کنیم
         if (onlineProjects.length < 2) {
             const fallbackProjects = generateFallbackProjects(projectData);
-            // ترکیب نتایج آنلاین با fallback
             return [...onlineProjects, ...fallbackProjects].slice(0, 3);
         }
         
         return onlineProjects.slice(0, 3);
     } catch (error) {
-        // در صورت خطا، از محاسبه استفاده می‌کنیم
         return generateFallbackProjects(projectData);
     }
 }
 
-// محاسبه قیمت نهایی بر اساس نتایج جستجو و محاسبات
 function calculatePrice(projectData, similarProjects = []) {
-    // بررسی اینکه آیا پروژه‌های واقعی از بازار پیدا شده‌اند
     const marketProjects = similarProjects.filter(p => 
         p.source === 'web search' || p.source === 'estimated'
     );
@@ -648,7 +575,6 @@ function calculatePrice(projectData, similarProjects = []) {
     
     let basePrice;
     
-    // اگر پروژه‌های واقعی از بازار پیدا شدند، اولویت با آنهاست
     if (marketProjects.length > 0) {
         const marketPrices = marketProjects
             .filter(p => p.price > 0)
@@ -657,13 +583,11 @@ function calculatePrice(projectData, similarProjects = []) {
         if (marketPrices.length > 0) {
             const avgMarketPrice = marketPrices.reduce((a, b) => a + b, 0) / marketPrices.length;
             const calculatedPrice = calculateBasePrice(projectData);
-            // 85% بازار، 15% محاسبه
             basePrice = (avgMarketPrice * 0.85) + (calculatedPrice * 0.15);
         } else {
             basePrice = calculateBasePrice(projectData);
         }
     } 
-    // اگر فقط پروژه‌های محاسبه شده داریم، از میانگین آنها استفاده می‌کنیم
     else if (calculatedProjects.length > 0) {
         const calculatedPrices = calculatedProjects
             .filter(p => p.price > 0)
@@ -671,47 +595,40 @@ function calculatePrice(projectData, similarProjects = []) {
         
         if (calculatedPrices.length > 0) {
             const avgCalculatedPrice = calculatedPrices.reduce((a, b) => a + b, 0) / calculatedPrices.length;
-            // 90% قیمت‌های محاسبه شده مشابه، 10% محاسبه جدید
             const newCalculatedPrice = calculateBasePrice(projectData);
             basePrice = (avgCalculatedPrice * 0.9) + (newCalculatedPrice * 0.1);
         } else {
             basePrice = calculateBasePrice(projectData);
         }
     } 
-    // اگر هیچ پروژه مشابهی پیدا نشد
     else {
         basePrice = calculateBasePrice(projectData);
     }
     
-    // اعمال ضریب زمان (هرچه زمان کمتر، قیمت بیشتر) - فقط برای تنظیمات نهایی
-    const timelineMultiplier = 1 + (4 - projectData.timeline) * 0.05; // کاهش تاثیر
+    const timelineMultiplier = 1 + (4 - projectData.timeline) * 0.05;
     basePrice *= Math.max(0.9, Math.min(1.15, timelineMultiplier));
     
-    // اعمال ضریب تیم (هرچه تیم بزرگتر، قیمت بیشتر) - فقط برای تنظیمات نهایی
-    const teamMultiplier = 1 + (projectData.teamSize - 1) * 0.1; // کاهش تاثیر
+    const teamMultiplier = 1 + (projectData.teamSize - 1) * 0.1;
     basePrice *= teamMultiplier;
     
-    // اعمال ضریب سابقه کار برنامه‌نویس
     const experienceMultipliers = {
-        'junior': 0.7,      // کمتر از 2 سال - 30% تخفیف
-        'mid': 1.0,         // 2 تا 5 سال - قیمت عادی
-        'senior': 1.3,      // 5 تا 10 سال - 30% اضافه
-        'expert': 1.6       // بیش از 10 سال - 60% اضافه
+        'junior': 0.7,
+        'mid': 1.0,
+        'senior': 1.3,
+        'expert': 1.6
     };
     const experienceMultiplier = experienceMultipliers[projectData.experience] || 1.0;
     basePrice *= experienceMultiplier;
     
-    // اعمال ضریب تعداد پروژه‌های ساخته شده
     const projectsCountMultipliers = {
-        'few': 0.8,         // کمتر از 5 پروژه - 20% تخفیف
-        'medium': 1.0,      // 5 تا 15 پروژه - قیمت عادی
-        'many': 1.2,        // 15 تا 30 پروژه - 20% اضافه
-        'expert': 1.4       // بیش از 30 پروژه - 40% اضافه
+        'few': 0.8,
+        'medium': 1.0,
+        'many': 1.2,
+        'expert': 1.4
     };
     const projectsCountMultiplier = projectsCountMultipliers[projectData.projectsCount] || 1.0;
     basePrice *= projectsCountMultiplier;
     
-    // محاسبه بازه قیمت - بازه کوچکتر برای دقت بیشتر
     const minPrice = basePrice * 0.75;
     const recommendedPrice = basePrice;
     const maxPrice = basePrice * 1.35;
@@ -724,7 +641,45 @@ function calculatePrice(projectData, similarProjects = []) {
     };
 }
 
-// نمایش نتایج
+async function saveToGoogleSheets(userData, projectData, prices) {
+    try {
+        const dataToSave = {
+            timestamp: new Date().toLocaleString('fa-IR'),
+            userName: userData.name || '',
+            userPhone: userData.phone || '',
+            userEmail: userData.email || '',
+            projectType: getProjectTypeName(projectData.type),
+            technologies: projectData.technologies,
+            features: projectData.features.replace(/\n/g, ' | '),
+            complexity: getComplexityName(projectData.complexity),
+            timeline: projectData.timeline + ' ماه',
+            teamSize: projectData.teamSize + ' نفر',
+            experience: getExperienceName(projectData.experience),
+            projectsCount: getProjectsCountName(projectData.projectsCount),
+            additionalInfo: projectData.additionalInfo || '',
+            minPrice: formatNumber(prices.min),
+            recommendedPrice: formatNumber(prices.recommended),
+            maxPrice: formatNumber(prices.max)
+        };
+
+        // استفاده از fetch با no-cors برای Google Apps Script
+        await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dataToSave)
+        });
+
+        console.log('داده‌ها به Google Sheets ارسال شد');
+        return true;
+    } catch (error) {
+        console.error('خطا در ارسال به Google Sheets:', error);
+        return false;
+    }
+}
+
 function displayResults(projectData, prices, similarProjects) {
     const resultsDiv = document.getElementById('results');
     const minPriceDiv = document.getElementById('minPrice');
@@ -733,12 +688,10 @@ function displayResults(projectData, prices, similarProjects) {
     const analysisDiv = document.getElementById('analysis');
     const similarProjectsDiv = document.getElementById('similarProjects');
     
-    // نمایش قیمت‌ها
     minPriceDiv.textContent = formatNumber(prices.min);
     recommendedPriceDiv.textContent = formatNumber(prices.recommended);
     maxPriceDiv.textContent = formatNumber(prices.max);
     
-    // محاسبه تاثیر سابقه کار و تعداد پروژه
     const experienceMultipliers = {
         'junior': 0.7,
         'mid': 1.0,
@@ -762,7 +715,6 @@ function displayResults(projectData, prices, similarProjects) {
         ? `${multiplierPercent}%` 
         : 'بدون تغییر';
     
-    // نمایش تحلیل
     let analysisHTML = `
         <div class="analysis-item">
             <strong>نوع پروژه:</strong> ${getProjectTypeName(projectData.type)}
@@ -804,7 +756,6 @@ function displayResults(projectData, prices, similarProjects) {
     
     analysisDiv.innerHTML = analysisHTML;
     
-    // نمایش پروژه‌های مشابه
     if (similarProjects.length > 0) {
         let similarHTML = '';
         similarProjects.forEach(project => {
@@ -837,12 +788,10 @@ function displayResults(projectData, prices, similarProjects) {
         similarProjectsDiv.innerHTML = '<p>پروژه مشابهی یافت نشد. در حال جستجو...</p>';
     }
     
-    // نمایش نتایج
     resultsDiv.classList.remove('hidden');
     resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// تبدیل نام نوع پروژه
 function getProjectTypeName(type) {
     const names = {
         'web': 'وب سایت',
@@ -856,7 +805,6 @@ function getProjectTypeName(type) {
     return names[type] || type;
 }
 
-// تبدیل نام پیچیدگی
 function getComplexityName(complexity) {
     const names = {
         'simple': 'ساده',
@@ -867,7 +815,6 @@ function getComplexityName(complexity) {
     return names[complexity] || complexity;
 }
 
-// تبدیل نام سابقه کار
 function getExperienceName(experience) {
     const names = {
         'junior': 'کمتر از 2 سال (Junior)',
@@ -897,16 +844,28 @@ function resetForm() {
 }
 
 // بارگذاری تعداد اجراها هنگام لود صفحه
-window.addEventListener('DOMContentLoaded', function() {
-    loadExecutionCount();
-});
+// window.addEventListener('DOMContentLoaded', function() {
+//     loadExecutionCount();
+// });
 
 // هندل کردن ارسال فرم
 document.getElementById('projectForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    // ثبت یک اجرای جدید
-    trackExecution();
+    // بررسی شماره تماس (الزامی)
+    const userPhone = document.getElementById('userPhone').value.trim();
+    if (!userPhone || userPhone.length < 10) {
+        alert('⚠️ لطفاً شماره تماس معتبر وارد کنید (حداقل 10 رقم)');
+        document.getElementById('userPhone').focus();
+        return;
+    }
+    
+    // جمع‌آوری اطلاعات کاربر
+    const userData = {
+        name: document.getElementById('userName').value.trim(),
+        phone: userPhone,
+        email: document.getElementById('userEmail').value.trim()
+    };
     
     // نمایش لودینگ
     const resultsDiv = document.getElementById('results');
@@ -933,7 +892,7 @@ document.getElementById('projectForm').addEventListener('submit', function(e) {
     resultsDiv.appendChild(loadingDiv);
     resultsDiv.classList.remove('hidden');
     
-    // جمع‌آوری داده‌ها
+    // جمع‌آوری داده‌های پروژه
     const projectData = {
         type: document.getElementById('projectType').value,
         technologies: document.getElementById('technologies').value,
@@ -969,26 +928,25 @@ document.getElementById('projectForm').addEventListener('submit', function(e) {
                 updateLoading('در حال محاسبه قیمت بر اساس نتایج بازار...');
             }
             
-            // محاسبه قیمت بر اساس نتایج
             const prices = calculatePrice(projectData, similarProjects);
             
-            // حذف لودینگ
+            // ذخیره در Google Sheets
+            updateLoading('در حال ذخیره اطلاعات...');
+            await saveToGoogleSheets(userData, projectData, prices);
+            
             const loading = resultsDiv.querySelector('#loadingIndicator');
             if (loading) loading.remove();
             
-            // نمایش مجدد بخش‌ها
             if (priceRange) priceRange.style.display = '';
             if (analysisSection) analysisSection.style.display = '';
             if (similarProjectsSection) similarProjectsSection.style.display = '';
             if (resetBtn) resetBtn.style.display = '';
             
-            // نمایش نتایج
             displayResults(projectData, prices, similarProjects);
         } catch (error) {
-            // در صورت خطا، از محاسبه ساده استفاده می‌کنیم (بدون نمایش خطا به کاربر)
             updateLoading('در حال محاسبه بر اساس الگوریتم...');
             
-            setTimeout(() => {
+            setTimeout(async () => {
                 const loading = resultsDiv.querySelector('#loadingIndicator');
                 if (loading) loading.remove();
                 
@@ -999,6 +957,10 @@ document.getElementById('projectForm').addEventListener('submit', function(e) {
                 
                 const fallbackProjects = generateFallbackProjects(projectData);
                 const prices = calculatePrice(projectData, fallbackProjects);
+                
+                // ذخیره در Google Sheets حتی در صورت خطا
+                await saveToGoogleSheets(userData, projectData, prices);
+                
                 displayResults(projectData, prices, fallbackProjects);
             }, 500);
         }
