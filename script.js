@@ -18,6 +18,11 @@ function getCountAPIWithProxy(url) {
     return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 }
 
+// استفاده از JSONBin.io به عنوان جایگزین (نیاز به ایجاد bin دارد)
+// برای استفاده: به jsonbin.io بروید و یک bin ایجاد کنید، سپس ID را اینجا بگذارید
+const JSONBIN_BIN_ID = null; // اگر می‌خواهید از JSONBin استفاده کنید، ID را اینجا بگذارید
+const JSONBIN_API_KEY = null; // API key از jsonbin.io
+
 // بررسی اینکه آیا قبلاً در این session ثبت شده یا نه (برای جلوگیری از ثبت تکراری)
 let hasTrackedThisSession = false;
 
