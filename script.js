@@ -7,7 +7,7 @@ const CORS_PROXIES = [
 ];
 
 // سیستم شمارش تعداد اجراها
-// استفاده از CountAPI - یک کلید منحصر به فرد برای این پروژه
+// استفاده از CountAPI برای آمار کلی همه کاربران
 const COUNT_API_KEY = 'sunrise4solution-project-price-calculator';
 const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_API_KEY}`;
 const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
@@ -18,16 +18,18 @@ function getCountAPIWithProxy(url) {
     return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 }
 
-// ثبت یک اجرای جدید
+// بررسی اینکه آیا قبلاً در این session ثبت شده یا نه (برای جلوگیری از ثبت تکراری)
+let hasTrackedThisSession = false;
+
+// ثبت یک اجرای جدید (فقط یک بار در هر session)
 async function trackExecution() {
+    // جلوگیری از ثبت تکراری در یک session
+    if (hasTrackedThisSession) {
+        return;
+    }
+    hasTrackedThisSession = true;
+    
     try {
-        // ثبت در localStorage برای نمایش فوری
-        const savedCount = localStorage.getItem('executionCount');
-        const newCount = savedCount ? parseInt(savedCount) + 1 : 1;
-        localStorage.setItem('executionCount', newCount);
-        localStorage.setItem('executionCountTime', Date.now());
-        updateExecutionCountDisplay(newCount);
-        
         // ثبت در CountAPI - ابتدا تلاش مستقیم
         fetch(COUNT_API_URL, {
             method: 'GET',
@@ -44,6 +46,7 @@ async function trackExecution() {
         })
         .then(data => {
             if (data && data.value) {
+                // ذخیره در localStorage برای نمایش سریع
                 localStorage.setItem('executionCount', data.value);
                 localStorage.setItem('executionCountTime', Date.now());
                 updateExecutionCountDisplay(data.value);
@@ -74,12 +77,12 @@ async function trackExecution() {
                             updateExecutionCountDisplay(apiResponse.value);
                         }
                     } catch (e) {
-                        // parse نشد - از localStorage استفاده می‌کنیم
+                        // parse نشد
                     }
                 }
             })
             .catch(() => {
-                // همه روش‌ها شکست خوردند - از localStorage استفاده می‌کنیم
+                // همه روش‌ها شکست خوردند
             });
         });
     } catch (error) {
@@ -116,54 +119,42 @@ function updateExecutionCountDisplay(count) {
     countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
 }
 
-// بارگذاری تعداد اجراها در ابتدای صفحه
+// بارگذاری تعداد اجراها در ابتدای صفحه (آمار کلی از سرور)
 function loadExecutionCount() {
-    // بررسی localStorage
+    // نمایش مقدار localStorage به عنوان placeholder (در صورت وجود)
     const savedCount = localStorage.getItem('executionCount');
-    const savedTime = localStorage.getItem('executionCountTime');
-    const oneDay = 24 * 60 * 60 * 1000;
-    
-    // اگر داده کمتر از 1 روز پیش ذخیره شده، از آن استفاده می‌کنیم
-    if (savedCount && savedTime && (Date.now() - parseInt(savedTime)) < oneDay) {
+    if (savedCount) {
         updateExecutionCountDisplay(parseInt(savedCount));
     }
     
-    // دریافت تعداد واقعی از API با proxy
-    const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
-    
-    fetch(proxyUrl, {
+    // دریافت تعداد واقعی از API - ابتدا تلاش مستقیم
+    fetch(COUNT_GET_URL, {
         method: 'GET',
-        mode: 'cors'
+        mode: 'cors',
+        headers: {
+            'Accept': 'application/json'
+        }
     })
     .then(response => {
         if (response.ok) {
             return response.json();
         }
-        throw new Error('Response not OK');
+        throw new Error('Direct fetch failed');
     })
     .then(data => {
-        // allorigins پاسخ را در contents برمی‌گرداند
-        if (data && data.contents) {
-            try {
-                const apiResponse = JSON.parse(data.contents);
-                if (apiResponse && apiResponse.value) {
-                    localStorage.setItem('executionCount', apiResponse.value);
-                    localStorage.setItem('executionCountTime', Date.now());
-                    updateExecutionCountDisplay(apiResponse.value);
-                    return;
-                }
-            } catch (e) {
-                // parse نشد
-            }
-        }
-        // اگر parse نشد، از localStorage استفاده می‌کنیم
-        if (savedCount) {
+        if (data && data.value !== undefined) {
+            localStorage.setItem('executionCount', data.value);
+            localStorage.setItem('executionCountTime', Date.now());
+            updateExecutionCountDisplay(data.value);
+        } else if (savedCount) {
             updateExecutionCountDisplay(parseInt(savedCount));
         }
     })
     .catch(() => {
-        // تلاش مستقیم (بدون proxy)
-        fetch(COUNT_GET_URL, {
+        // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
+        const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+        
+        fetch(proxyUrl, {
             method: 'GET',
             mode: 'cors'
         })
@@ -171,19 +162,30 @@ function loadExecutionCount() {
             if (response.ok) {
                 return response.json();
             }
-            throw new Error('Response not OK');
+            throw new Error('Proxy fetch failed');
         })
         .then(data => {
-            if (data && data.value) {
-                localStorage.setItem('executionCount', data.value);
-                localStorage.setItem('executionCountTime', Date.now());
-                updateExecutionCountDisplay(data.value);
-            } else if (savedCount) {
+            // allorigins پاسخ را در contents برمی‌گرداند
+            if (data && data.contents) {
+                try {
+                    const apiResponse = JSON.parse(data.contents);
+                    if (apiResponse && apiResponse.value !== undefined) {
+                        localStorage.setItem('executionCount', apiResponse.value);
+                        localStorage.setItem('executionCountTime', Date.now());
+                        updateExecutionCountDisplay(apiResponse.value);
+                        return;
+                    }
+                } catch (e) {
+                    // parse نشد
+                }
+            }
+            // اگر parse نشد، از localStorage استفاده می‌کنیم
+            if (savedCount) {
                 updateExecutionCountDisplay(parseInt(savedCount));
             }
         })
         .catch(() => {
-            // در صورت خطا، از localStorage استفاده می‌کنیم
+            // همه روش‌ها شکست خوردند - از localStorage استفاده می‌کنیم
             if (savedCount) {
                 updateExecutionCountDisplay(parseInt(savedCount));
             }
