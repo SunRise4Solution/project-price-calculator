@@ -852,17 +852,25 @@ function resetForm() {
 document.getElementById('projectForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
-    // بررسی شماره تماس (الزامی)
+    // بررسی نام و نام خانوادگی (الزامی)
+    const userName = document.getElementById('userName').value.trim();
+    if (!userName || userName.length < 2) {
+        alert('⚠️ لطفاً نام و نام خانوادگی خود را وارد کنید');
+        document.getElementById('userName').focus();
+        return;
+    }
+    
+    // بررسی شماره تماس (الزامی - دقیقاً 11 رقم)
     const userPhone = document.getElementById('userPhone').value.trim();
-    if (!userPhone || userPhone.length < 10) {
-        alert('⚠️ لطفاً شماره تماس معتبر وارد کنید (حداقل 10 رقم)');
+    if (!userPhone || userPhone.length !== 11 || !/^[0-9]{11}$/.test(userPhone)) {
+        alert('⚠️ لطفاً شماره تماس معتبر وارد کنید (دقیقاً 11 رقم)');
         document.getElementById('userPhone').focus();
         return;
     }
     
     // جمع‌آوری اطلاعات کاربر
     const userData = {
-        name: document.getElementById('userName').value.trim(),
+        name: userName,
         phone: userPhone,
         email: document.getElementById('userEmail').value.trim()
     };
