@@ -116,7 +116,7 @@ function updateExecutionCountDisplay(count) {
         document.body.appendChild(countDisplay);
     }
     
-    countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
+    // countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
 }
 
 // بارگذاری تعداد اجراها در ابتدای صفحه (آمار کلی از سرور)
