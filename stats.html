@@ -146,8 +146,15 @@
                 valueEl.textContent = '0';
             }
             
-            // تلاش برای دریافت از CountAPI
-            fetch(COUNT_GET_URL, {
+            // استفاده از CORS proxy برای CountAPI
+            function getCountAPIWithProxy(url) {
+                return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            }
+            
+            // تلاش برای دریافت از CountAPI با proxy
+            const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+            
+            fetch(proxyUrl, {
                 method: 'GET',
                 mode: 'cors'
             })
@@ -159,33 +166,25 @@
             })
             .then(data => {
                 loadingEl.style.display = 'none';
-                if (data && data.value !== undefined) {
-                    valueEl.textContent = formatNumber(data.value);
-                    localStorage.setItem('executionCount', data.value);
-                    localStorage.setItem('executionCountTime', Date.now());
-                    if (statusEl) {
-                        statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
-                        statusEl.style.color = '#28a745';
-                    }
-                } else {
-                    // اگر داده معتبر نبود، از localStorage استفاده می‌کنیم
-                    if (savedCount) {
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                            statusEl.style.color = '#ffc107';
+                // allorigins پاسخ را در contents برمی‌گرداند
+                if (data && data.contents) {
+                    try {
+                        const apiResponse = JSON.parse(data.contents);
+                        if (apiResponse && apiResponse.value !== undefined) {
+                            valueEl.textContent = formatNumber(apiResponse.value);
+                            localStorage.setItem('executionCount', apiResponse.value);
+                            localStorage.setItem('executionCountTime', Date.now());
+                            if (statusEl) {
+                                statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
+                                statusEl.style.color = '#28a745';
+                            }
+                            return;
                         }
-                    } else {
-                        valueEl.textContent = '0';
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                            statusEl.style.color = '#ffc107';
-                        }
+                    } catch (e) {
+                        // parse نشد
                     }
                 }
-            })
-            .catch(error => {
-                loadingEl.style.display = 'none';
-                // استفاده از localStorage
+                // اگر parse نشد یا داده معتبر نبود، از localStorage استفاده می‌کنیم
                 if (savedCount) {
                     if (statusEl) {
                         statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
@@ -198,6 +197,60 @@
                         statusEl.style.color = '#ffc107';
                     }
                 }
+            })
+            .catch(error => {
+                // تلاش مستقیم (بدون proxy)
+                fetch(COUNT_GET_URL, {
+                    method: 'GET',
+                    mode: 'cors'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('Response not OK');
+                })
+                .then(data => {
+                    loadingEl.style.display = 'none';
+                    if (data && data.value !== undefined) {
+                        valueEl.textContent = formatNumber(data.value);
+                        localStorage.setItem('executionCount', data.value);
+                        localStorage.setItem('executionCountTime', Date.now());
+                        if (statusEl) {
+                            statusEl.textContent = '✅ به‌روزرسانی موفق از سرور';
+                            statusEl.style.color = '#28a745';
+                        }
+                    } else {
+                        if (savedCount) {
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                                statusEl.style.color = '#ffc107';
+                            }
+                        } else {
+                            valueEl.textContent = '0';
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                                statusEl.style.color = '#ffc107';
+                            }
+                        }
+                    }
+                })
+                .catch(() => {
+                    loadingEl.style.display = 'none';
+                    // استفاده از localStorage
+                    if (savedCount) {
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                            statusEl.style.color = '#ffc107';
+                        }
+                    } else {
+                        valueEl.textContent = '0';
+                        if (statusEl) {
+                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                            statusEl.style.color = '#ffc107';
+                        }
+                    }
+                });
             });
         }
         
