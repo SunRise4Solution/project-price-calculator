@@ -8,39 +8,13 @@ const CORS_PROXIES = [
 
 // سیستم شمارش تعداد اجراها
 // استفاده از CountAPI برای آمار کلی همه کاربران
-// Namespace و Key برای این پروژه
-const COUNT_NAMESPACE = 'sunrise4solution';
-const COUNT_KEY = 'project-price-calculator';
-const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_NAMESPACE}/${COUNT_KEY}`;
-const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_NAMESPACE}/${COUNT_KEY}`;
-const COUNT_CREATE_URL = `https://api.countapi.xyz/create?namespace=${COUNT_NAMESPACE}&key=${COUNT_KEY}&value=0`;
-
-// ایجاد counter در صورت عدم وجود (فقط یک بار)
-function ensureCounterExists() {
-    // بررسی اینکه آیا قبلاً ایجاد شده یا نه
-    const counterCreated = sessionStorage.getItem('counterCreated');
-    if (counterCreated) {
-        return; // قبلاً ایجاد شده
-    }
-    
-    // تلاش برای ایجاد counter
-    fetch(COUNT_CREATE_URL, {
-        method: 'GET',
-        mode: 'cors'
-    })
-    .then(response => {
-        if (response.ok) {
-            sessionStorage.setItem('counterCreated', 'true');
-        }
-    })
-    .catch(() => {
-        // خطا را نادیده می‌گیریم - ممکن است قبلاً ایجاد شده باشد
-    });
-}
+// استفاده از یک key ساده (بدون namespace)
+const COUNT_KEY = 'sunrise4solution-project-price-calculator';
+const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_KEY}`;
+const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_KEY}`;
 
 // استفاده از CORS proxy برای CountAPI
 function getCountAPIWithProxy(url) {
-    // استفاده از allorigins که معمولاً بهتر کار می‌کند
     return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 }
 
@@ -55,39 +29,43 @@ async function trackExecution() {
     }
     hasTrackedThisSession = true;
     
-    // اطمینان از وجود counter
-    ensureCounterExists();
-    
     try {
-        // ثبت در CountAPI - ابتدا تلاش مستقیم
-        fetch(COUNT_API_URL, {
+        // ثبت در CountAPI - استفاده از proxy (مطمئن‌تر)
+        const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
+        
+        fetch(proxyUrl, {
             method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'application/json'
-            }
+            mode: 'cors'
         })
         .then(response => {
             if (response.ok) {
                 return response.json();
             }
-            throw new Error('Direct fetch failed');
+            return null;
         })
         .then(data => {
-            if (data && data.value) {
-                // ذخیره در localStorage برای نمایش سریع
-                localStorage.setItem('executionCount', data.value);
-                localStorage.setItem('executionCountTime', Date.now());
-                updateExecutionCountDisplay(data.value);
+            // allorigins پاسخ را در contents برمی‌گرداند
+            if (data && data.contents) {
+                try {
+                    const apiResponse = JSON.parse(data.contents);
+                    if (apiResponse && apiResponse.value) {
+                        localStorage.setItem('executionCount', apiResponse.value);
+                        localStorage.setItem('executionCountTime', Date.now());
+                        updateExecutionCountDisplay(apiResponse.value);
+                    }
+                } catch (e) {
+                    // parse نشد
+                }
             }
         })
         .catch(() => {
-            // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
-            const proxyUrl = getCountAPIWithProxy(COUNT_API_URL);
-            
-            fetch(proxyUrl, {
+            // اگر proxy کار نکرد، تلاش مستقیم
+            fetch(COUNT_API_URL, {
                 method: 'GET',
-                mode: 'cors'
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
             })
             .then(response => {
                 if (response.ok) {
@@ -96,18 +74,10 @@ async function trackExecution() {
                 return null;
             })
             .then(data => {
-                // allorigins پاسخ را در contents برمی‌گرداند
-                if (data && data.contents) {
-                    try {
-                        const apiResponse = JSON.parse(data.contents);
-                        if (apiResponse && apiResponse.value) {
-                            localStorage.setItem('executionCount', apiResponse.value);
-                            localStorage.setItem('executionCountTime', Date.now());
-                            updateExecutionCountDisplay(apiResponse.value);
-                        }
-                    } catch (e) {
-                        // parse نشد
-                    }
+                if (data && data.value) {
+                    localStorage.setItem('executionCount', data.value);
+                    localStorage.setItem('executionCountTime', Date.now());
+                    updateExecutionCountDisplay(data.value);
                 }
             })
             .catch(() => {
@@ -148,30 +118,55 @@ function updateExecutionCountDisplay(count) {
     countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
 }
 
-// بارگذاری تعداد اجراها در ابتدای صفحه (آمار کلی از سرور)
 function loadExecutionCount() {
-    // اطمینان از وجود counter
-    ensureCounterExists();
-    
     // نمایش مقدار localStorage به عنوان placeholder (در صورت وجود)
     const savedCount = localStorage.getItem('executionCount');
     if (savedCount) {
         updateExecutionCountDisplay(parseInt(savedCount));
     }
     
-    // دریافت تعداد واقعی از API - ابتدا تلاش مستقیم
-    fetch(COUNT_GET_URL, {
+    // دریافت تعداد واقعی از API - استفاده از proxy (مطمئن‌تر)
+    const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+    
+    fetch(proxyUrl, {
         method: 'GET',
-        mode: 'cors',
-        headers: {
-            'Accept': 'application/json'
-        }
+        mode: 'cors'
     })
     .then(response => {
         if (response.ok) {
             return response.json();
         }
-        throw new Error('Direct fetch failed');
+        throw new Error('Proxy fetch failed');
+    })
+    .then(data => {
+        // allorigins پاسخ را در contents برمی‌گرداند
+        if (data && data.contents) {
+            try {
+                const apiResponse = JSON.parse(data.contents);
+                if (apiResponse && apiResponse.value !== undefined) {
+                    localStorage.setItem('executionCount', apiResponse.value);
+                    localStorage.setItem('executionCountTime', Date.now());
+                    updateExecutionCountDisplay(apiResponse.value);
+                    return;
+                }
+            } catch (e) {
+                // parse نشد
+            }
+        }
+        // اگر parse نشد، تلاش مستقیم
+        return fetch(COUNT_GET_URL, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+    })
+    .then(response => {
+        if (response && response.ok) {
+            return response.json();
+        }
+        return null;
     })
     .then(data => {
         if (data && data.value !== undefined) {
@@ -183,45 +178,10 @@ function loadExecutionCount() {
         }
     })
     .catch(() => {
-        // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
-        const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
-        
-        fetch(proxyUrl, {
-            method: 'GET',
-            mode: 'cors'
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Proxy fetch failed');
-        })
-        .then(data => {
-            // allorigins پاسخ را در contents برمی‌گرداند
-            if (data && data.contents) {
-                try {
-                    const apiResponse = JSON.parse(data.contents);
-                    if (apiResponse && apiResponse.value !== undefined) {
-                        localStorage.setItem('executionCount', apiResponse.value);
-                        localStorage.setItem('executionCountTime', Date.now());
-                        updateExecutionCountDisplay(apiResponse.value);
-                        return;
-                    }
-                } catch (e) {
-                    // parse نشد
-                }
-            }
-            // اگر parse نشد، از localStorage استفاده می‌کنیم
-            if (savedCount) {
-                updateExecutionCountDisplay(parseInt(savedCount));
-            }
-        })
-        .catch(() => {
-            // همه روش‌ها شکست خوردند - از localStorage استفاده می‌کنیم
-            if (savedCount) {
-                updateExecutionCountDisplay(parseInt(savedCount));
-            }
-        });
+        // در صورت خطا، از localStorage استفاده می‌کنیم
+        if (savedCount) {
+            updateExecutionCountDisplay(parseInt(savedCount));
+        }
     });
 }
 
