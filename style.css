@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #0a0a0a;
     min-height: 100vh;
     padding: 20px;
     direction: rtl;
@@ -15,31 +15,38 @@ body {
 .container {
     max-width: 900px;
     margin: 0 auto;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    background: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     overflow: hidden;
 }
 
 header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    color: #e0e0e0;
     padding: 40px;
     text-align: center;
+    border-bottom: 1px solid #333;
 }
 
 header h1 {
     font-size: 2.5em;
     margin-bottom: 10px;
+    color: #ffffff;
+    font-weight: 300;
+    letter-spacing: 1px;
 }
 
 header p {
     font-size: 1.1em;
-    opacity: 0.9;
+    opacity: 0.7;
+    color: #b0b0b0;
 }
 
 main {
     padding: 40px;
+    background: #1a1a1a;
 }
 
 .form-section {
@@ -47,11 +54,12 @@ main {
 }
 
 .form-section h2 {
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 25px;
     font-size: 1.8em;
-    border-bottom: 3px solid #667eea;
+    border-bottom: 1px solid #333;
     padding-bottom: 10px;
+    font-weight: 300;
 }
 
 .form-group {
@@ -61,8 +69,8 @@ main {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #555;
-    font-weight: 600;
+    color: #c0c0c0;
+    font-weight: 400;
     font-size: 1.1em;
 }
 
@@ -71,18 +79,21 @@ main {
 .form-group textarea {
     width: 100%;
     padding: 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 4px;
     font-size: 1em;
     font-family: inherit;
-    transition: border-color 0.3s;
+    color: #e0e0e0;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #666;
+    box-shadow: 0 0 0 2px rgba(150, 150, 150, 0.1);
 }
 
 .form-group textarea {
@@ -92,30 +103,48 @@ main {
 .submit-btn {
     width: 100%;
     padding: 15px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
+    background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+    color: #ffffff;
+    border: 1px solid #444;
+    border-radius: 4px;
     font-size: 1.2em;
-    font-weight: bold;
+    font-weight: 400;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.3s;
     margin-top: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.submit-btn:hover::before {
+    left: 100%;
 }
 
 .submit-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+    border-color: #555;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .submit-btn:active {
-    transform: translateY(0);
+    transform: translateY(1px);
 }
 
 .results {
     margin-top: 40px;
     padding-top: 30px;
-    border-top: 3px solid #e0e0e0;
+    border-top: 1px solid #333;
 }
 
 .results.hidden {
@@ -123,9 +152,10 @@ main {
 }
 
 .results h2 {
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 25px;
     font-size: 1.8em;
+    font-weight: 300;
 }
 
 .price-range {
@@ -136,118 +166,137 @@ main {
 }
 
 .price-box {
-    background: #f8f9fa;
+    background: #0a0a0a;
     padding: 25px;
-    border-radius: 12px;
+    border-radius: 4px;
     text-align: center;
-    border: 2px solid #e0e0e0;
-    transition: transform 0.2s;
+    border: 1px solid #333;
+    transition: all 0.3s;
 }
 
 .price-box:hover {
-    transform: translateY(-5px);
+    border-color: #555;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .price-box.recommended {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: #667eea;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    color: #ffffff;
+    border: 1px solid #666;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
 .price-label {
     display: block;
     font-size: 0.9em;
     margin-bottom: 10px;
-    opacity: 0.8;
+    opacity: 0.7;
+    color: #b0b0b0;
 }
 
 .price-value {
     display: block;
     font-size: 2em;
-    font-weight: bold;
+    font-weight: 300;
     margin-bottom: 5px;
+    color: #ffffff;
 }
 
 .currency {
     font-size: 0.9em;
-    opacity: 0.8;
+    opacity: 0.7;
+    color: #b0b0b0;
 }
 
 .analysis-section,
 .similar-projects-section {
     margin-top: 30px;
     padding: 20px;
-    background: #f8f9fa;
-    border-radius: 12px;
+    background: #0a0a0a;
+    border-radius: 4px;
+    border: 1px solid #333;
 }
 
 .analysis-section h3,
 .similar-projects-section h3 {
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 15px;
     font-size: 1.4em;
+    font-weight: 300;
 }
 
 .analysis-item {
     margin-bottom: 15px;
     padding: 15px;
-    background: white;
-    border-radius: 8px;
-    border-right: 4px solid #667eea;
+    background: #1a1a1a;
+    border-radius: 4px;
+    border-right: 2px solid #444;
 }
 
 .analysis-item strong {
-    color: #667eea;
+    color: #c0c0c0;
 }
 
 .similar-project {
     margin-bottom: 15px;
     padding: 15px;
-    background: white;
-    border-radius: 8px;
-    border-right: 4px solid #764ba2;
+    background: #1a1a1a;
+    border-radius: 4px;
+    border-right: 2px solid #444;
 }
 
 .similar-project h4 {
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 8px;
+    font-weight: 400;
 }
 
 .similar-project p {
-    color: #666;
+    color: #b0b0b0;
     margin: 5px 0;
 }
 
 .reset-btn {
     width: 100%;
     padding: 12px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 8px;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    border-radius: 4px;
     font-size: 1em;
     cursor: pointer;
     margin-top: 20px;
-    transition: background 0.3s;
+    transition: all 0.3s;
 }
 
 .reset-btn:hover {
-    background: #5a6268;
+    background: #3a3a3a;
+    border-color: #555;
 }
 
 footer {
-    background: #f8f9fa;
+    background: #0a0a0a;
     padding: 20px;
     text-align: center;
-    color: #666;
+    color: #888;
     font-size: 0.9em;
+    border-top: 1px solid #333;
+}
+
+footer a {
+    color: #b0b0b0;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+footer a:hover {
+    color: #e0e0e0;
 }
 
 .loading {
     text-align: center;
     padding: 20px;
-    color: #667eea;
+    color: #b0b0b0;
     font-size: 1.1em;
 }
 
@@ -267,5 +316,16 @@ footer {
     .price-box.recommended {
         transform: scale(1);
     }
+}
+
+/* Chrome/Metallic accents */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #555;
+}
+
+select option {
+    background: #1a1a1a;
+    color: #e0e0e0;
 }
 
