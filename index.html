@@ -91,6 +91,26 @@
                         </div>
                     </div>
 
+                    <div class="form-section">
+                        <h2>اطلاعات تماس</h2>
+                        
+                        <div class="form-group">
+                            <label for="userName">نام و نام خانوادگی:</label>
+                            <input type="text" id="userName" placeholder="مثال: علی احمدی" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="userPhone">شماره تماس <span style="color: #ff6b6b;">*</span>:</label>
+                            <input type="tel" id="userPhone" placeholder="مثال: 09123456789" pattern="[0-9]{10,11}" required>
+                            <small style="color: #888; font-size: 0.9em; display: block; margin-top: 5px;">شماره تماس الزامی است</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="userEmail">ایمیل (اختیاری):</label>
+                            <input type="email" id="userEmail" placeholder="مثال: example@email.com">
+                        </div>
+                    </div>
+
                     <button type="submit" class="submit-btn">محاسبه قیمت</button>
                 </form>
 
@@ -131,7 +151,7 @@
 
             <footer>
                 <p>این ابزار برای تخمین اولیه قیمت استفاده می‌شود. قیمت نهایی ممکن است متفاوت باشد.</p>
-                
+              
             </footer>
         </div>
 
