@@ -6,6 +6,126 @@ const CORS_PROXIES = [
     'https://api.codetabs.com/v1/proxy?quest='
 ];
 
+// سیستم شمارش تعداد اجراها
+// استفاده از JSONBin.io برای ذخیره تعداد اجراها
+const JSONBIN_BIN_ID = '675f0f0de41b4a34b8b3a123'; // این ID بعد از ایجاد bin باید تغییر کند
+const JSONBIN_API_KEY = '$2a$10$YOUR_API_KEY'; // این هم باید تنظیم شود
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+// استفاده از CountAPI به عنوان fallback
+const COUNT_API_KEY = 'project-price-calculator-sunrise';
+const COUNT_API_URL = `https://api.countapi.xyz/hit/${COUNT_API_KEY}`;
+const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
+
+// ثبت یک اجرای جدید
+async function trackExecution() {
+    try {
+        // روش 1: استفاده از CountAPI (ساده‌تر)
+        fetch(COUNT_API_URL, {
+            method: 'GET',
+            mode: 'cors'
+        }).catch(() => {
+            // در صورت خطا، نادیده می‌گیریم
+        });
+        
+        // روش 2: استفاده از localStorage و افزایش شمارنده
+        const savedCount = localStorage.getItem('executionCount');
+        const newCount = savedCount ? parseInt(savedCount) + 1 : 1;
+        localStorage.setItem('executionCount', newCount);
+        localStorage.setItem('executionCountTime', Date.now());
+        updateExecutionCountDisplay(newCount);
+        
+        // دریافت تعداد کل از CountAPI (در پس‌زمینه)
+        fetch(COUNT_GET_URL, {
+            method: 'GET',
+            mode: 'cors'
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return null;
+        })
+        .then(data => {
+            if (data && data.value) {
+                // اگر مقدار از سرور بیشتر بود، از سرور استفاده می‌کنیم
+                if (data.value >= newCount) {
+                    localStorage.setItem('executionCount', data.value);
+                    localStorage.setItem('executionCountTime', Date.now());
+                    updateExecutionCountDisplay(data.value);
+                }
+            }
+        })
+        .catch(() => {
+            // خطا را نادیده می‌گیریم - از localStorage استفاده می‌کنیم
+        });
+    } catch (error) {
+        // خطا را نادیده می‌گیریم تا تجربه کاربری مختل نشود
+        console.log('خطا در ثبت اجرا:', error);
+    }
+}
+
+// نمایش تعداد اجراها در صفحه
+function updateExecutionCountDisplay(count) {
+    // بررسی اینکه آیا قبلاً نمایش داده شده یا نه
+    let countDisplay = document.getElementById('executionCountDisplay');
+    
+    if (!countDisplay) {
+        // ایجاد عنصر نمایش
+        countDisplay = document.createElement('div');
+        countDisplay.id = 'executionCountDisplay';
+        countDisplay.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-weight: bold;
+        `;
+        document.body.appendChild(countDisplay);
+    }
+    
+    countDisplay.innerHTML = `📊 تعداد استفاده: ${formatNumber(count)}`;
+}
+
+// بارگذاری تعداد اجراها در ابتدای صفحه
+function loadExecutionCount() {
+    // بررسی localStorage
+    const savedCount = localStorage.getItem('executionCount');
+    const savedTime = localStorage.getItem('executionCountTime');
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    // اگر داده کمتر از 1 روز پیش ذخیره شده، از آن استفاده می‌کنیم
+    if (savedCount && savedTime && (Date.now() - parseInt(savedTime)) < oneDay) {
+        updateExecutionCountDisplay(parseInt(savedCount));
+    }
+    
+    // دریافت تعداد واقعی از API
+    fetch(COUNT_GET_URL, {
+        method: 'GET',
+        mode: 'cors'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data && data.value) {
+            localStorage.setItem('executionCount', data.value);
+            localStorage.setItem('executionCountTime', Date.now());
+            updateExecutionCountDisplay(data.value);
+        }
+    })
+    .catch(() => {
+        // در صورت خطا، از localStorage استفاده می‌کنیم
+        if (savedCount) {
+            updateExecutionCountDisplay(parseInt(savedCount));
+        }
+    });
+}
+
 // تبدیل نام نوع پروژه به انگلیسی برای جستجو
 function getProjectTypeEnglish(type) {
     const types = {
@@ -712,9 +832,17 @@ function resetForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// بارگذاری تعداد اجراها هنگام لود صفحه
+window.addEventListener('DOMContentLoaded', function() {
+    loadExecutionCount();
+});
+
 // هندل کردن ارسال فرم
 document.getElementById('projectForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    
+    // ثبت یک اجرای جدید
+    trackExecution();
     
     // نمایش لودینگ
     const resultsDiv = document.getElementById('results');
