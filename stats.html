@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0a0a0a;
             min-height: 100vh;
             padding: 20px;
             display: flex;
@@ -22,72 +22,83 @@
         }
         
         .stats-container {
-            background: white;
-            border-radius: 20px;
+            background: #1a1a1a;
+            border-radius: 8px;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
             max-width: 600px;
             width: 100%;
             text-align: center;
         }
         
         h1 {
-            color: #333;
+            color: #e0e0e0;
             margin-bottom: 30px;
             font-size: 2em;
+            font-weight: 300;
+            letter-spacing: 1px;
         }
         
         .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+            color: #ffffff;
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 4px;
             margin-bottom: 20px;
+            border: 1px solid #333;
         }
         
         .stat-label {
             font-size: 1.2em;
             margin-bottom: 10px;
-            opacity: 0.9;
+            opacity: 0.7;
+            color: #b0b0b0;
         }
         
         .stat-value {
             font-size: 3em;
-            font-weight: bold;
+            font-weight: 300;
             margin: 10px 0;
+            color: #ffffff;
         }
         
         .refresh-btn {
-            background: #667eea;
-            color: white;
-            border: none;
+            background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+            color: #ffffff;
+            border: 1px solid #444;
             padding: 12px 30px;
-            border-radius: 8px;
+            border-radius: 4px;
             font-size: 1em;
             cursor: pointer;
             margin-top: 20px;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            font-weight: 400;
         }
         
         .refresh-btn:hover {
-            background: #5568d3;
+            background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
+            border-color: #555;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
         .loading {
-            color: #666;
+            color: #b0b0b0;
             margin: 20px 0;
         }
         
         .back-link {
             display: inline-block;
             margin-top: 20px;
-            color: #667eea;
+            color: #b0b0b0;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 400;
+            transition: color 0.3s;
         }
         
         .back-link:hover {
-            text-decoration: underline;
+            color: #e0e0e0;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -112,8 +123,31 @@
     </div>
 
     <script>
-        const COUNT_API_KEY = 'sunrise4solution-project-price-calculator';
-        const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_API_KEY}`;
+        const COUNT_NAMESPACE = 'sunrise4solution';
+        const COUNT_KEY = 'project-price-calculator';
+        const COUNT_GET_URL = `https://api.countapi.xyz/get/${COUNT_NAMESPACE}/${COUNT_KEY}`;
+        const COUNT_CREATE_URL = `https://api.countapi.xyz/create?namespace=${COUNT_NAMESPACE}&key=${COUNT_KEY}&value=0`;
+        
+        // ایجاد counter در صورت عدم وجود
+        function ensureCounterExists() {
+            const counterCreated = sessionStorage.getItem('counterCreated');
+            if (counterCreated) {
+                return;
+            }
+            
+            fetch(COUNT_CREATE_URL, {
+                method: 'GET',
+                mode: 'cors'
+            })
+            .then(response => {
+                if (response.ok) {
+                    sessionStorage.setItem('counterCreated', 'true');
+                }
+            })
+            .catch(() => {
+                // خطا را نادیده می‌گیریم
+            });
+        }
         const CORS_PROXIES = [
             'https://api.allorigins.win/raw?url=',
             'https://corsproxy.io/?',
@@ -127,6 +161,9 @@
         
         // بارگذاری آمار
         function loadStats() {
+            // اطمینان از وجود counter
+            ensureCounterExists();
+            
             const loadingEl = document.getElementById('loading');
             const valueEl = document.getElementById('totalExecutions');
             const statusEl = document.getElementById('statusMessage');
@@ -136,125 +173,125 @@
             
             // ابتدا نمایش مقدار localStorage
             const savedCount = localStorage.getItem('executionCount');
-            if (savedCount) {
-                valueEl.textContent = formatNumber(parseInt(savedCount));
-                if (statusEl) {
-                    statusEl.textContent = '📊 نمایش مقدار محلی';
-                    statusEl.style.color = '#17a2b8';
-                }
-            } else {
-                valueEl.textContent = '0';
-            }
-            
-            // استفاده از CORS proxy برای CountAPI
-            function getCountAPIWithProxy(url) {
-                return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            }
-            
-            // دریافت آمار کلی از سرور - ابتدا تلاش مستقیم
-            fetch(COUNT_GET_URL, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                throw new Error('Direct fetch failed');
-            })
-            .then(data => {
-                loadingEl.style.display = 'none';
-                if (data && data.value !== undefined) {
-                    valueEl.textContent = formatNumber(data.value);
-                    localStorage.setItem('executionCount', data.value);
-                    localStorage.setItem('executionCountTime', Date.now());
+                if (savedCount) {
+                    valueEl.textContent = formatNumber(parseInt(savedCount));
                     if (statusEl) {
-                        statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
-                        statusEl.style.color = '#28a745';
+                        statusEl.textContent = '📊 نمایش مقدار محلی';
+                        statusEl.style.color = '#88c0d0';
                     }
                 } else {
-                    if (savedCount) {
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                            statusEl.style.color = '#ffc107';
-                        }
-                    } else {
-                        valueEl.textContent = '0';
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                            statusEl.style.color = '#ffc107';
-                        }
-                    }
+                    valueEl.textContent = '0';
                 }
-            })
-            .catch(() => {
-                // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
-                const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
                 
-                fetch(proxyUrl, {
+                // استفاده از CORS proxy برای CountAPI
+                function getCountAPIWithProxy(url) {
+                    return `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                }
+                
+                // دریافت آمار کلی از سرور - ابتدا تلاش مستقیم
+                fetch(COUNT_GET_URL, {
                     method: 'GET',
-                    mode: 'cors'
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 })
                 .then(response => {
                     if (response.ok) {
                         return response.json();
                     }
-                    throw new Error('Proxy fetch failed');
+                    throw new Error('Direct fetch failed');
                 })
                 .then(data => {
                     loadingEl.style.display = 'none';
-                    // allorigins پاسخ را در contents برمی‌گرداند
-                    if (data && data.contents) {
-                        try {
-                            const apiResponse = JSON.parse(data.contents);
-                            if (apiResponse && apiResponse.value !== undefined) {
-                                valueEl.textContent = formatNumber(apiResponse.value);
-                                localStorage.setItem('executionCount', apiResponse.value);
-                                localStorage.setItem('executionCountTime', Date.now());
-                                if (statusEl) {
-                                    statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
-                                    statusEl.style.color = '#28a745';
-                                }
-                                return;
-                            }
-                        } catch (e) {
-                            // parse نشد
-                        }
-                    }
-                    // اگر parse نشد یا داده معتبر نبود
-                    if (savedCount) {
+                    if (data && data.value !== undefined) {
+                        valueEl.textContent = formatNumber(data.value);
+                        localStorage.setItem('executionCount', data.value);
+                        localStorage.setItem('executionCountTime', Date.now());
                         if (statusEl) {
-                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                            statusEl.style.color = '#ffc107';
+                            statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
+                            statusEl.style.color = '#a3be8c';
                         }
                     } else {
-                        valueEl.textContent = '0';
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                            statusEl.style.color = '#ffc107';
+                        if (savedCount) {
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                                statusEl.style.color = '#ebcb8b';
+                            }
+                        } else {
+                            valueEl.textContent = '0';
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                                statusEl.style.color = '#ebcb8b';
+                            }
                         }
                     }
                 })
                 .catch(() => {
-                    loadingEl.style.display = 'none';
-                    // استفاده از localStorage
-                    if (savedCount) {
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
-                            statusEl.style.color = '#ffc107';
+                    // اگر مستقیم کار نکرد، از proxy استفاده می‌کنیم
+                    const proxyUrl = getCountAPIWithProxy(COUNT_GET_URL);
+                    
+                    fetch(proxyUrl, {
+                        method: 'GET',
+                        mode: 'cors'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
                         }
-                    } else {
-                        valueEl.textContent = '0';
-                        if (statusEl) {
-                            statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
-                            statusEl.style.color = '#ffc107';
+                        throw new Error('Proxy fetch failed');
+                    })
+                    .then(data => {
+                        loadingEl.style.display = 'none';
+                        // allorigins پاسخ را در contents برمی‌گرداند
+                        if (data && data.contents) {
+                            try {
+                                const apiResponse = JSON.parse(data.contents);
+                                if (apiResponse && apiResponse.value !== undefined) {
+                                    valueEl.textContent = formatNumber(apiResponse.value);
+                                    localStorage.setItem('executionCount', apiResponse.value);
+                                    localStorage.setItem('executionCountTime', Date.now());
+                                    if (statusEl) {
+                                        statusEl.textContent = '✅ آمار کلی از سرور (همه کاربران)';
+                                        statusEl.style.color = '#a3be8c';
+                                    }
+                                    return;
+                                }
+                            } catch (e) {
+                                // parse نشد
+                            }
                         }
-                    }
+                        // اگر parse نشد یا داده معتبر نبود
+                        if (savedCount) {
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                                statusEl.style.color = '#ebcb8b';
+                            }
+                        } else {
+                            valueEl.textContent = '0';
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                                statusEl.style.color = '#ebcb8b';
+                            }
+                        }
+                    })
+                    .catch(() => {
+                        loadingEl.style.display = 'none';
+                        // استفاده از localStorage
+                        if (savedCount) {
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ نمایش مقدار محلی (اتصال به سرور برقرار نشد)';
+                                statusEl.style.color = '#ebcb8b';
+                            }
+                        } else {
+                            valueEl.textContent = '0';
+                            if (statusEl) {
+                                statusEl.textContent = '⚠️ هنوز هیچ اجرایی ثبت نشده است';
+                                statusEl.style.color = '#ebcb8b';
+                            }
+                        }
+                    });
                 });
-            });
         }
         
         // بارگذاری خودکار هنگام لود صفحه
